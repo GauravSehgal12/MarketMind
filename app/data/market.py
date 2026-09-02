@@ -29,41 +29,58 @@ def get_quote(symbol: str) -> dict:
     return response.json()
 
 
+
+
+
 def get_historical_data(
     symbol: str,
     period: str = "2y",
 ) -> pd.DataFrame:
-    """Get historical OHLCV data."""
 
-    df = yf.download(
-        symbol,
+    ticker = yf.Ticker(symbol)
+
+    df = ticker.history(
         period=period,
-        interval="1d",
         auto_adjust=False,
-        progress=False,
     )
 
-    if df is None or df.empty:
+    if df.empty:
         raise ValueError(
             f"No historical data found for {symbol}"
         )
 
-    # Handle yfinance MultiIndex columns
+    # Handle yfinance MultiIndex
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
 
     df = df.reset_index()
 
+    df = df[
+        [
+            "Date",
+            "Adj Close",
+            "Close",
+            "High",
+            "Low",
+            "Open",
+            "Volume",
+        ]
+    ]
+
     df = df.rename(
         columns={
             "Date": "timestamp",
-            "Open": "open",
+            "Adj Close": "adj_close",
+            "Close": "close",
             "High": "high",
             "Low": "low",
-            "Close": "close",
-            "Adj Close": "adj_close",
+            "Open": "open",
             "Volume": "volume",
         }
     )
+
+    df["timestamp"] = pd.to_datetime(
+        df["timestamp"]
+    ).dt.tz_localize(None)
 
     return df

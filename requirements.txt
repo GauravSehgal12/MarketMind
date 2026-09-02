@@ -3,6 +3,7 @@ langchain
 langchain-openai
 pandas
 numpy
+matplotlib
 scikit-learn
 xgboost
 ta

@@ -1,7 +1,9 @@
-from app.data.ingestion import save_stock_data
+from app.ml.permutation_importance import (
+    analyze_permutation_importance,
+)
 
 
-save_stock_data(
+importance = analyze_permutation_importance(
     symbol="NVDA",
     period="2y",
 )

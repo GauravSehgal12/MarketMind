@@ -20,7 +20,6 @@ print(features[
         "macd",
         "macd_signal",
         "atr_14",
-        "volatility_20",
-        "volume_change"
+        "volatility_20"
     ]
 ].tail(10))

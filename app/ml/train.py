@@ -1,0 +1,228 @@
+import pandas as pd
+
+from sqlalchemy import text
+from sklearn.metrics import (
+    accuracy_score,
+    roc_auc_score,
+)
+from xgboost import XGBClassifier
+
+from app.database.connection import engine
+
+
+FEATURE_COLUMNS = [
+    "close",
+    "return_1d",
+    "return_5d",
+    "sma_20",
+    "sma_50",
+    "ema_20",
+    "rsi_14",
+    "macd",
+    "macd_signal",
+    "macd_histogram",
+    "atr_14",
+    "volatility_20",
+    "volume_change",
+]
+
+TARGET_COLUMN = "next_day_direction"
+
+
+def load_training_data(symbol: str) -> pd.DataFrame:
+
+    query = text("""
+        SELECT
+            timestamp,
+            close,
+            return_1d,
+            return_5d,
+            sma_20,
+            sma_50,
+            ema_20,
+            rsi_14,
+            macd,
+            macd_signal,
+            macd_histogram,
+            atr_14,
+            volatility_20,
+            volume_change,
+            next_day_direction
+        FROM stock_features
+        WHERE symbol = :symbol
+        ORDER BY timestamp
+    """)
+
+    with engine.connect() as connection:
+
+        df = pd.read_sql(
+            query,
+            connection,
+            params={"symbol": symbol},
+        )
+
+    return df
+
+
+def create_model():
+
+    return XGBClassifier(
+        n_estimators=300,
+        max_depth=4,
+        learning_rate=0.03,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        objective="binary:logistic",
+        eval_metric="logloss",
+        random_state=42,
+    )
+
+
+def walk_forward_validation(
+    symbol: str,
+    n_splits: int = 5,
+):
+
+    df = load_training_data(symbol)
+
+    if df.empty:
+        raise ValueError(
+            f"No training data found for {symbol}"
+        )
+
+    df = df.dropna(
+        subset=FEATURE_COLUMNS + [TARGET_COLUMN]
+    ).reset_index(drop=True)
+
+    X = df[FEATURE_COLUMNS]
+    y = df[TARGET_COLUMN]
+
+    total_rows = len(df)
+
+    # Minimum amount of data used for
+    # the first training window
+    initial_train_size = int(
+        total_rows * 0.60
+    )
+
+    remaining_rows = (
+        total_rows - initial_train_size
+    )
+
+    test_size = remaining_rows // n_splits
+
+    if test_size < 1:
+        raise ValueError(
+            "Not enough data for walk-forward validation."
+        )
+
+    results = []
+
+    print("\nWalk-Forward Validation")
+    print("========================")
+
+    for fold in range(n_splits):
+
+        train_end = (
+            initial_train_size
+            + fold * test_size
+        )
+
+        test_start = train_end
+
+        if fold == n_splits - 1:
+            test_end = total_rows
+        else:
+            test_end = (
+                test_start + test_size
+            )
+
+        X_train = X.iloc[:train_end]
+        y_train = y.iloc[:train_end]
+
+        X_test = X.iloc[
+            test_start:test_end
+        ]
+
+        y_test = y.iloc[
+            test_start:test_end
+        ]
+
+        model = create_model()
+
+        model.fit(
+            X_train,
+            y_train,
+        )
+
+        predictions = model.predict(X_test)
+
+        probabilities = model.predict_proba(
+            X_test
+        )[:, 1]
+
+        accuracy = accuracy_score(
+            y_test,
+            predictions,
+        )
+
+        # ROC-AUC requires both classes
+        # to exist in the test set.
+        if len(y_test.unique()) > 1:
+
+            auc = roc_auc_score(
+                y_test,
+                probabilities,
+            )
+
+        else:
+
+            auc = float("nan")
+
+        results.append({
+            "fold": fold + 1,
+            "train_size": len(X_train),
+            "test_size": len(X_test),
+            "accuracy": accuracy,
+            "roc_auc": auc,
+        })
+
+        print(
+            f"\nFold {fold + 1}"
+        )
+
+        print(
+            f"Train: {len(X_train)}"
+        )
+
+        print(
+            f"Test:  {len(X_test)}"
+        )
+
+        print(
+            f"Accuracy: {accuracy:.4f}"
+        )
+
+        if pd.notna(auc):
+
+            print(
+                f"ROC-AUC: {auc:.4f}"
+            )
+
+    results_df = pd.DataFrame(results)
+
+    print("\n========================")
+    print("Overall Results")
+    print("========================")
+
+    print(
+        f"Mean Accuracy: "
+        f"{results_df['accuracy'].mean():.4f}"
+    )
+
+    print(
+        f"Mean ROC-AUC: "
+        f"{results_df['roc_auc'].mean():.4f}"
+    )
+
+    return results_df

@@ -1,18 +1,14 @@
-from app.data.news import get_news
-from app.data.news_storage import save_news_articles
+from app.agent.sentiment_storage import analyze_pending_articles
 
 
-# Fetch NVDA news
-articles = get_news(
-    symbol="NVDA",
-    company_name="NVIDIA",
-    days=7,
-    page_size=100,
+print("Starting sentiment storage...")
+print("============================")
+
+
+processed = analyze_pending_articles(
+    limit=20
 )
 
-print("Articles fetched:", len(articles))
 
-# Save articles to PostgreSQL
-inserted = save_news_articles(articles)
-
-print("Articles inserted:", inserted)
+print("\n============================")
+print(f"Articles processed: {processed}")

@@ -1,17 +1,14 @@
-from app.data.market import get_historical_data
+from app.agents.sentiment_storage import analyze_pending_articles
 
 
-df = get_historical_data("NVDA", period="2y")
+print("Starting sentiment storage...")
+print("============================")
 
-print(df.head())
-print()
 
-print("Number of rows:", len(df))
-print()
+processed = analyze_pending_articles(
+    limit=20
+)
 
-print("Columns:")
-print(df.columns.tolist())
-print()
 
-print("Latest data:")
-print(df.tail())
+print("\n============================")
+print(f"Articles processed: {processed}")

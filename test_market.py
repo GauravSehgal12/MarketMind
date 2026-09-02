@@ -1,20 +1,17 @@
-import requests
-
-from app.config import settings
+from app.data.market import get_historical_data
 
 
-url = "https://finnhub.io/api/v1/quote"
+df = get_historical_data("NVDA", period="2y")
 
-params = {
-    "symbol": "NVDA",
-    "token": settings.finnhub_api_key,
-}
+print(df.head())
+print()
 
-response = requests.get(
-    url,
-    params=params,
-    timeout=10,
-)
+print("Number of rows:", len(df))
+print()
 
-print("Status:", response.status_code)
-print("Response:", response.text)
+print("Columns:")
+print(df.columns.tolist())
+print()
+
+print("Latest data:")
+print(df.tail())

@@ -1,6 +1,6 @@
 from app.data.market import get_historical_data
 from app.database.connection import engine
-from app.database.models import StockPrice
+from app.database.models import StockFeature
 from sqlalchemy.dialects.postgresql import insert
 
 
@@ -30,7 +30,7 @@ def save_stock_data(symbol: str, period: str = "2y"):
         print(f"No data found for {symbol}")
         return
 
-    stmt = insert(StockPrice).values(records)
+    stmt = insert(StockFeature).values(records)
 
     stmt = stmt.on_conflict_do_nothing(
         constraint="uq_stock_symbol_timestamp"

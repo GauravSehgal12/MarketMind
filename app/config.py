@@ -8,6 +8,8 @@ class Settings(BaseSettings):
 
     fred_api_key: str
 
+    news_api_key: str
+
     database_url: str
 
     model_config = SettingsConfigDict(

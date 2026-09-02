@@ -1,11 +1,18 @@
-from app.ml.final_model import evaluate_final_model
+from app.data.news import get_news
+from app.data.news_storage import save_news_articles
 
 
-results = evaluate_final_model(
+# Fetch NVDA news
+articles = get_news(
     symbol="NVDA",
-    period="2y",
-    n_splits=5,
+    company_name="NVIDIA",
+    days=7,
+    page_size=100,
 )
 
-print("\n")
-print(results)
+print("Articles fetched:", len(articles))
+
+# Save articles to PostgreSQL
+inserted = save_news_articles(articles)
+
+print("Articles inserted:", inserted)

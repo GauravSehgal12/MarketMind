@@ -1,14 +1,13 @@
-from app.agent.sentiment_storage import analyze_pending_articles
-
-
-print("Starting sentiment storage...")
-print("============================")
-
-
-processed = analyze_pending_articles(
-    limit=20
+from app.ml.new_models import (
+    walk_forward_news_validation
 )
 
 
-print("\n============================")
-print(f"Articles processed: {processed}")
+results = walk_forward_news_validation(
+    symbol="NVDA",
+    period="2y",
+    n_splits=5,
+)
+
+print("\n")
+print("Validation completed.")
